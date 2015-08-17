@@ -58,7 +58,8 @@
 		"easyrdf/easyrdf" : "0.9.*",
 		"doctrine/dbal" : ">=2.2.0,<2.4",
 		"oat-sa/oatbox-extension-installer": "dev-master",
-		"php" : ">=5.3.2"
+		"php" : ">=5.3.2",
+		"psr/log": "1.0.0"
 	},
 	"replace": {
      		"oat-sa/generis":"dev-master"
