@@ -26,15 +26,11 @@ use oat\generis\model\user\UserRdf;
 
 class BasicUser implements User
 {
-    private string $identifier;
-    private array $roles;
-    private string $login;
-
-    public function __construct(string $identifier, array $roles, string $login)
-    {
-        $this->identifier = $identifier;
-        $this->roles = $roles;
-        $this->login = $login;
+    public function __construct(
+        private readonly string $identifier,
+        private readonly array $roles,
+        private readonly string $login
+    ) {
     }
 
     public function getIdentifier(): string
