@@ -15,10 +15,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (c) 2013 (original work) Open Assessment Technologies SA (under the project TAO-PRODUCT);
+ * Copyright (c) 2013-2026 (original work) Open Assessment Technologies SA (under the project TAO-PRODUCT);
  *
  */
 
+use oat\oatbox\user\BasicUser;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use oat\oatbox\service\ServiceManager;
 
@@ -45,7 +46,10 @@ abstract class common_session_SessionManager
     public static function getSession()
     {
         if (is_null(self::$session)) {
-            if (PHPSession::singleton()->hasAttribute(self::PHPSESSION_SESSION_KEY)) {
+            $session = self::createAccessTokenSession();
+            if ($session) {
+                self::$session = $session;
+            } elseif (PHPSession::singleton()->hasAttribute(self::PHPSESSION_SESSION_KEY)) {
                 $session = PHPSession::singleton()->getAttribute(self::PHPSESSION_SESSION_KEY);
                 if (! $session instanceof common_session_Session) {
                     throw new common_exception_Error('Non session stored in php-session');
@@ -113,5 +117,49 @@ abstract class common_session_SessionManager
     public static function isAnonymous()
     {
         return is_null(self::getSession()->getUserUri());
+    }
+
+    public static function extractAccessTokenFromRequest(): string
+    {
+        $authorizationHeader = explode(' ', $_SERVER['HTTP_AUTHORIZATION'] ?? '', 2);
+        return array_pop($authorizationHeader);
+    }
+
+    public static function parseAccessToken(string $accessToken): ?array
+    {
+        /** @noinspection PhpUnusedLocalVariableInspection */
+        @[$_, $payload] = explode('.', $accessToken);
+        $rawToken = base64_decode(strtr($payload ?? '', '-_', '+/'));
+        return json_decode($rawToken, true);
+    }
+
+    public static function buildUserIdentityString(string $userId, string $role = ''): string
+    {
+        return sprintf('%s%s%s', $role, $role ? '#' : '', $userId);
+    }
+
+    private static function createAccessTokenSession(): ?common_session_Session
+    {
+        $token = self::parseAccessToken(self::extractAccessTokenFromRequest());
+        if (
+            empty($token['user']['login'])
+            || !is_string($token['user']['login'])
+            || !preg_match(
+                '/^(?:(?<role>[^#]*#[^#]*)#)?(?<userId>.*)$/',
+                $token['user']['login'],
+                $matches
+            )
+        ) {
+            return null;
+        }
+
+        $role = $matches['role'] ?? '';
+        return new common_session_BasicSession(
+            new BasicUser(
+                $role,
+                $role ? [$role] : [],
+                $matches['userId'],
+            )
+        );
     }
 }
