@@ -115,8 +115,8 @@ abstract class common_session_SessionManager
 
     public static function parseAccessToken(string $accessToken): ?array
     {
-        /** @noinspection PhpUnusedLocalVariableInspection */
-        @[$_, $payload] = explode('.', $accessToken);
+        $parts = explode('.', $accessToken, 3);
+        $payload = $parts[1] ?? '';
         $rawToken = base64_decode(strtr($payload ?? '', '-_', '+/'));
         return json_decode($rawToken, true);
     }
